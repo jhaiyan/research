@@ -1,0 +1,15 @@
+.DS_Store
+desktop.ini
+Thumbs.db
+.temp
+temp
+
+.claude/settings.json
+.claude/settings.*.json
+CLAUDE.local.md
+
+node_modules
+.pnpm-store/
+tmp/
+
+generated/
