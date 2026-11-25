@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "default_mode": "standard",
+  "modes": {
+    "fast": {
+      "max_wall_time_minutes": 8,
+      "max_agents": 2,
+      "max_discovery_queries": 6,
+      "max_total_websearches": 12,
+      "max_new_page_fetches": 30,
+      "max_candidate_items": 20,
+      "max_verified_events": 6,
+      "max_concepts": 1,
+      "max_sources_per_routine_claim": 1,
+      "max_sources_per_extraordinary_claim": 2,
+      "max_link_depth": 1,
+      "target_total_tokens": 30000,
+      "max_report_characters": 10000
+    },
+    "standard": {
+      "max_wall_time_minutes": 15,
+      "max_agents": 4,
+      "max_discovery_queries": 12,
+      "max_total_websearches": 30,
+      "max_new_page_fetches": 60,
+      "max_candidate_items": 30,
+      "max_verified_events": 12,
+      "max_concepts": 3,
+      "max_sources_per_routine_claim": 1,
+      "max_sources_per_extraordinary_claim": 2,
+      "max_link_depth": 1,
+      "target_total_tokens": 80000,
+      "max_report_characters": 16000
+    },
+    "deep": {
+      "max_wall_time_minutes": 45,
+      "max_agents": 6,
+      "max_discovery_queries": 25,
+      "max_total_websearches": 80,
+      "max_new_page_fetches": 160,
+      "max_candidate_items": 60,
+      "max_verified_events": 20,
+      "max_concepts": 5,
+      "max_sources_per_routine_claim": 2,
+      "max_sources_per_extraordinary_claim": 3,
+      "max_link_depth": 2,
+      "target_total_tokens": 250000,
+      "max_report_characters": 26000
+    }
+  },
+  "execution_rules": {
+    "allow_nested_agents": false,
+    "page_timeout_seconds": 15,
+    "agent_timeout_seconds": 180,
+    "max_retries": 1,
+    "failure_circuit_breaker": 3,
+    "warn_at_budget_ratio": 0.8,
+    "concept_queries_per_concept": 4,
+    "concept_page_fetches_per_concept": 3,
+    "triage_agent_uses_subagents": false,
+    "read_running_agent_transcripts": false,
+    "cache_ttl_hours": {
+      "index": 12,
+      "news": 168,
+      "paper": 720,
+      "link_status": 24,
+      "github_repo": 24
+    }
+  }
+}

@@ -1,108 +1,105 @@
-# Emerging Term Detection Rules
+# 新兴术语检测规则
 
-This file defines the complete rules and steps for term mining from collected content.
+本文件定义**低成本**的术语检测流程。目标是在有限的查询预算内找出真正值得写进简报的方法论与概念，而不是穷举所有新词。
 
-## 1. Build Corpus
+前置输入：`deduped.jsonl`（合并后的候选池）。术语检测只读该文件与已写入的 `evidence.jsonl`，不重复抓取已缓存页面。
 
-From retrieved pages, extract and aggregate the following into a raw text list:
+---
 
-- Title of each article
-- First paragraph or summary (first 2-3 sentences) of each article
-- Hacker News / Reddit hot post titles and high-vote comments
-- GitHub Trending project names and descriptions
+## 1. 语料构建
 
-> Full article body is not needed, only title-level text
+只使用标题与摘要级文本，来源包括：
 
-## 2. Time Slice Comparison (if publication date available)
+- 每条候选的标题；
+- 候选附带的摘要（API 类来源如 arXiv、HN）；
+- 筛选代理产出的 `selected.json` 中的入选理由。
 
-- Divide corpus into `last 7 days` and `previous 8-30 days` two slices
-- Identify phrases with significantly increased relative frequency (>3x), or phrases appearing multiple times in recent slice but never in earlier slice
+不要为此额外抓取全文。
 
-## 3. Pattern-Based Extraction (MUST execute)
+## 2. 时间片比较
 
-Extract candidate terms matching these patterns:
+按发布日期把候选分为两片：
 
-- `X engineering` (e.g., context engineering, vibe engineering)
-- `X-first development` / `X-first AI` (e.g., prompt-first, agent-first)
-- `post-X AI` / `beyond X` (e.g., post-RLHF, beyond prompts)
-- `what is X` / `why X matters` / `introducing X` (extract X)
-- `"Quoted phrases"` that look like new methodology names
-- `a new X paradigm` / `the new X engineering`
-- `Agent = Model + X` structure or similar expressions
-- Articles comparing old and new approaches and explicitly naming them
-- `from X to Y` evolution narrative structure — these titles are strong signals of paradigm shifts
+- 近片：截止日期前 7 天；
+- 远片：更早的候选。
 
-## 4. Filter Candidate Terms
+比较同一短语在两片中的出现次数，优先关注：
 
-For each candidate term, verify:
+- 仅在近片出现的短语；
+- 近片出现次数是远片 3 倍以上的短语；
+- 同一短语在近片来自 ≥2 个独立来源的。
 
-- Weight calculation: First appearance on same website scores 10 points, each additional appearance scores 2 points
-- Uncommon terms: Should not be widely known AI terms (e.g., RAG, LoRA, GPT, Transformer, fine-tuning, Vibe Coding)
-- Not pure product/company names: Unless discussion focuses on methodology named after them
-- Time correlation: Appeared or gained attention within the specified time range
+远片数据多数来自缓存，不需要新增网络请求。
 
-## 5. Importance Supplementary Evaluation
+## 3. 模式匹配
 
-For candidate terms that passed above filters but have low frequency, the following signals make them worth prioritizing for deep verification (even with low frequency):
+从标题与摘要中提取候选短语，匹配以下模式：
 
-- **First post by authoritative source**: Concept first proposed or named by authoritative bloggers like Martin Fowler, Simon Willison, Andrej Karpathy, Chip Huyen
-- **Clear paradigm naming**: Article title or opening uses "from X to Y" evolution narrative structure
-- **Methodology systematization**: Concept has complete system (e.g., multiple articles, guides, framework implementations)
-- **Tool/framework support**: Open source project named after concept on GitHub, or framework explicitly uses concept as core feature
-- **Significant community attention**: HN/Reddit discussion post with more than 50 votes
-- **GitHub stars burst**: Related project appears on Trending with rapid stars growth (e.g., thousands per week)
+- `X engineering`、`X-first`、`post-X`、`beyond X`；
+- `what is X`、`introducing X`、`why X matters`；
+- `Agent = Model + X` 形式的表达；
+- 明显是新方法名的引号短语；
+- `from X to Y` 的演进式标题；
+- 明确对比旧做法与新做法的标题。
 
-> If a concept is first posted by a single authoritative source (e.g., Simon Willison's blog series) and has a complete methodology system, include it for deep verification even with single source. Authoritative bloggers are often first posters of emerging concepts, not citees
->
-> Do not merge concept A into concept B or discard A because A is considered a subfield of B. Each concept should be independently evaluated and reported, letting users judge the hierarchical relationship between concepts
->
-> Concept relationships should be noted in the report, not simplified through merging
+## 4. 过滤与准入
 
-## 6. Immediate Reverse Search
+每个候选短语必须同时满足：
 
-For each candidate term that passed initial filtering, immediately execute the following searches to collect more evidence:
+| 条件 | 说明 |
+| ---- | ---- |
+| 频次 | 首次出现的网站计 10 分，每个新增出现计 2 分，总分 ≥ 20 |
+| 罕见度 | 不是 RAG、LoRA、Transformer、微调等广为人知的词 |
+| 非产品名 | 除非讨论对象是方法论本身 |
+| 时间相关 | 在本期时间范围内出现或升温 |
+| 可核验 | 至少存在一个可访问的原始页面 |
+
+以下情形直接淘汰，并记录到 `failures.jsonl`：
+
+- 只有厂商博客与营销材料支持；
+- 只有单一社交媒体转述；
+- 是既有概念的同义改写，且未形成独立方法体系；
+- 是产品名或公司名，不是方法论。
+
+**允许本期概念数为 0。** 候选全部不达标时直接输出 0 个概念。
+
+## 5. 反向搜索（仅对入围候选执行）
+
+只有通过过滤的候选才执行反向搜索，且每个候选的查询数不超过 `budgets.json` 中的 `concept_queries_per_concept`（标准档为 4），不按平台逐个铺开。
+
+推荐查询组合：
 
 ```text
-"[candidate term]" AI
-"[candidate term]" site:x.com
-"[candidate term]" site:news.ycombinator.com
-"[candidate term]" site:reddit.com
-"[candidate term]" site:github.com
-"[candidate term]" site:zhihu.com
+"[term]" AI
+"[term]" site:news.ycombinator.com OR site:reddit.com
+"[term]" site:github.com
+"[term]" first introduced OR coined
 ```
 
-Append search results to candidate term records (occurrence count, source domain), eliminate terms with isolated mentions.
+若候选在 GitHub、论文或官方博客中出现同名项目，再针对该来源补一条定向查询。总量不得超过上限。
 
-## 7. Origin Verification (NOT Limited by Time Range)
+## 6. 起源追溯
 
-**Important**: During origin verification, **do NOT limit by the current query time range**. Must use multiple search engines (Google, Bing, DuckDuckGo) and various sources to trace the original origin of the concept.
+起源研究**不受本期时间范围限制**，但同样受查询预算约束：
 
-Use all possible means to verify the term's source (proposer, proposing organization, first appearing article or paper), record complete original source links for later use.
+1. 先查提出者本人的博客、论文或官方文档；
+2. 再查 GitHub 仓库、Issue 或最早提交；
+3. 最后用社交媒体与社区讨论补充时间线。
 
-**Origin Tracing Priority**:
-1. **First post by authoritative blogger**: Priority check of Martin Fowler, Simon Willison, Andrej Karpathy, Chip Huyen, Paul Graham blogs/sites
-2. **Academic source**: First appearance time in arXiv papers
-3. **GitHub history**: Earliest records in Issue, PR, Commit history
-4. **Social media**: First discussion on Twitter/X, LinkedIn
-5. **HN/Reddit**: Earliest related discussion post
-6. **Search engines**: Use Google, Bing, DuckDuckGo respectively for different results
+要求：
 
-**Search Engine Query Templates** (use at least 2-3 different search engines for each term):
-```
-Google: "[term]" OR "[term English]" site:martinfowler.com OR site:simonwillison.net
-Bing: "[term]" AI engineering methodology origin
-DuckDuckGo: "[term]" first introduced OR coined
-```
+- 记录最早可核验的出现时间、提出者与原始链接；
+- 找不到权威原始出处时标记 `【未经核实】`，并在结论中建议排除；
+- 不使用多搜索引擎穷举。最多使用两个引擎各一条查询，其余靠原始链接反查。
 
-**Report Requirements**:
-- Each term must record: earliest proposed date, earliest proposer/institution, original article/paper link
-- If unable to find corroborating source, mark as `【未经核实】` (Unverified)
-- If multiple search engine results are inconsistent, mark as `【有争议】` (Controversial) and present different viewpoints
+## 7. 输出
 
-## 8. Output Candidate List
+筛选代理在 `selected.json` 的 `concept_candidates` 中输出候选列表，每个候选包含：
 
-Generate structured list for each candidate term:
+| 字段 | 内容 |
+| ---- | ---- |
+| `term` | 精确短语 |
+| `evidence_urls` | 出现的原始链接 |
+| `note` | 为什么可能构成新概念或新方法 |
 
-| Term | Occurrences | Source URL | Earliest Detection Date | Summary |
-|------|------------:|------------|:-----------------------:|---------|
-| [term] | [N] | [complete link to specific page mentioning the term] | [date] | [one-sentence summary] |
+后续概念代理的完整验证见 `concept-verification.md`。

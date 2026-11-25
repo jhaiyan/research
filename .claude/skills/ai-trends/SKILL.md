@@ -1,142 +1,242 @@
 ---
 name: ai-trends
-description: Research latest AI development trends and generate AI Frontline Briefing reports, helping users stay current with cutting-edge AI developments and understand the latest knowledge and concepts.
+description: 研究指定时间范围内的 AI 重要进展，产出高信噪比、可追溯来源的 AI 前沿动态简报。通过分层漏斗流程控制检索与验证成本，保证每个结论都可回溯到原始来源。
 disable-model-invocation: true
 allowed-tools: Agent, WebSearch, WebFetch, Bash, Write, Read, Edit
 ---
 
-# AI Frontline Briefing Skill
+# AI 前沿动态简报
 
-You are a senior AI researcher and tech journalist. For the most important AI developments in the query time range, produce a high signal-to-noise, authoritative and reliable briefing. Through this report, users can stay informed about the latest AI advancements, understand new knowledge and concepts, and keep pace with industry trends.
+## 0. 参数与铁律
 
-## Parameters
+### 参数
 
-- `query_time_range`: Default is `last 2 weeks`. If the data source website supports time range filtering, use this parameter.
-  > Note: `last 2 months` means from the 1st of two months ago to the current date. Similarly, `last 2 weeks` means from the Monday two weeks ago to the current date.
-- `output_path`: Optional. Absolute path for output file. Defaults to `./generated/ai-trends/YYYY-MM-DD.md`
+| 参数 | 说明 | 默认值 |
+| ---- | ---- | ------ |
+| `query_time_range` | 检索时间范围 | `last 2 weeks` |
+| `mode` | 运行档位：`fast`、`standard`、`deep` | `standard` |
+| `output_path` | 报告输出路径 | `./ai-trends/YYYY-MM-DD.md` |
 
-## Step 1. Broad Search and Authoritative Source Retrieval
+`last 2 weeks` 指从两周前的周一开始到当前日期。档位决定预算，`standard` 之外的档位只在用户明确要求时使用。
 
-This step MUST be executed and cannot be skipped for any reason. If encountering problems, fix them if possible; if unable to fix, explain the reason and end immediately. Use Subagents to execute all 5 tasks in parallel:
+### 铁律（任何情况下不得违反）
 
-- **subagent-search** (`model: "deepseek-v4-flash:cloud"`): Read `references/search-queries.md` (both "Core Queries" and "Concept Discovery Queries" sections), execute ALL queries using WebSearch within the specified time range. This subagent handles all keyword-based search.
-- **subagent-news** (`model: "deepseek-v4-flash:cloud"`): Read `references/data-sources.md` sections "Official Research Labs", "News, Commentary, Policy & Briefings", and "Authoritative Personal Blogs & Developer Blogs". Use WebFetch to retrieve pages from all three sections. This subagent handles all page-fetching from official labs, news media, and authoritative blogs.
-- **subagent-research**: Read `references/data-sources.md` "Technical Analysis & Research" section, use WebFetch to retrieve pages from arXiv, HuggingFace Papers, LMSYS, SemiAnalysis, The Decoder, etc. Uses default model — needs deeper reasoning to evaluate paper significance and identify research trends.
-- **subagent-community** (`model: "deepseek-v4-flash:cloud"`): Read `references/data-sources.md` sections "Developer Communities" and "Chinese AI Media & Ecosystem". Use WebFetch/WebSearch to get content from both English and Chinese developer communities and media.
-- **subagent-github** (`model: "deepseek-v4-flash:cloud"`): Read `references/data-sources.md` "GitHub Trending" section, retrieve GitHub Trending data and perform comparative analysis as specified.
+1. **禁止嵌套代理**：任何子代理都不得再派生子代理，也不得再调用 Agent 工具。
+2. **禁止凑数**：没有足够证据的概念就不写，宁可本期概念数为 0。
+3. **单一候选池**：所有代理读取同一份 `deduped.jsonl` 与 `evidence.jsonl`，不得各自另建候选集。
+4. **预算优先**：达到预算 80% 时停止扩展搜索，只完成已选条目；达到 100% 时基于现有证据交付报告。
+5. **失败不重跑**：单个来源或条目失败只影响该条目，不得重跑整批。
+6. **证据唯一真源**：报告中每条数据都必须能对应 `evidence.jsonl` 中的一条记录。
+7. **禁止读取运行中代理的原始记录**：只用完成通知获取结果，不得对运行中的代理调用会返回原始转录的工具。
 
-All Subagents use the unified `query_time_range` parameter. If articles or comments contain important links, retrieve them but do not exceed three levels of depth.
+### 预算来源
 
-### Subagent Output Format (CRITICAL for Token Efficiency)
+`.claude/skills/ai-trends/budgets.json` 是预算唯一真源。执行前读取 `modes[mode]`，并把关键上限写入本次工作计划。
 
-Each subagent MUST output a **compact structured report**, NOT a verbose narrative. Follow these rules:
+---
 
-1. **No narrative prose** — use lists, tables, and bullet points only. Skip introductions, transitions, and conclusions.
-2. **One line per item** — each article/paper/post gets exactly one line with: date, title (linked), and one-sentence summary.
-3. **Group by source** — organize output by source name, not by theme.
-4. **Summary section** — at the end, a single "## Summary" section with:
-   - Top 5 most important findings (one line each)
-   - 3-5 recurring themes (one line each)
-   - 1-3 surprising findings (one line each)
-5. **Skip redundant content** — if the same news appears in multiple sources, mention it once with all source links.
+## 1. 工作区与证据库
 
-Example output format:
+每次执行使用独立工作目录，所有中间产物落盘，避免多代理重复抓取：
 
-```
-## Source: Anthropic News (4 articles)
-- 6/30 [Claude Sonnet 5](url) — Most agentic Sonnet, near Opus 4.8 performance
-- 6/30 [Claude Science](url) — AI workbench for scientists, 60+ preconfigured skills
-...
-
-## Source: OpenAI News (8 articles)
-- 6/26 [GPT-5.6 Sol preview](url) — New model family, $5/$30 per 1M tokens
-...
-
-## Summary
-**Top 5:**
-- Claude Sonnet 5 + GPT-5.6 Sol + Gemini Omni Flash all launched same week
-...
-**Themes:**
-- Agent safety becoming central focus across labs
-...
-**Surprising:**
-- DeepSeek $7.4B funding round, first external financing
-...
+```text
+generated/ai-trends/.work/YYYY-MM-DD/
+├── candidates.jsonl      # 采集原始候选
+├── deduped.jsonl         # 合并后的候选池
+├── selected.json         # 筛选代理产出的入选清单
+├── evidence.jsonl        # 已核验证据（唯一事实来源）
+├── failures.jsonl        # 失败与缺口
+└── metrics.json          # 实际消耗指标
 ```
 
-### Parameter Passing Mechanism
+缓存目录：`generated/ai-trends/.cache/`，按 `budgets.json` 的 `cache_ttl_hours` 复用，避免重复抓取。
 
-Each Subagent receives the following parameters in its prompt context:
-- `query_time_range`: The time range string (e.g., "last 2 weeks", "May 2026")
-- `absolute_date_range`: Calculated start and end dates in YYYY-MM-DD format for precise filtering
-- `current_date`: Today's date for reference
+证据对象结构见 `.claude/skills/ai-trends/schemas/evidence.schema.json`，用脚本校验：
 
-Example: For `query_time_range = "last 2 weeks"` on 2026-05-18:
-- `absolute_date_range`: { start: "2026-05-04", end: "2026-05-18" }
-- Subagents should use `after:2026-05-04 before:2026-05-18` in WebSearch queries
+```bash
+python3 .claude/skills/ai-trends/scripts/evidence.py validate --file <工作目录>/evidence.jsonl
+```
 
-## Step 2. Emerging Term Detection
+---
 
-Read `references/term-detection.md`, follow its rules and steps to perform term mining on collected content.
+## 2. 第一步：确定性采集
 
-## Step 3. Deep Research (Concept Tracing NOT Limited by Time Range)
+优先使用脚本抓取已知来源，**不要用搜索引擎发现已知站点**。
 
-**Key Principle**: Concept tracing analysis is **NOT limited by the current query time range**. Emerging concepts are often proposed much earlier and must be traced through multiple search engines (Google, Bing, DuckDuckGo) and various sources.
+```bash
+python3 .claude/skills/ai-trends/scripts/collect.py \
+  --sources .claude/skills/ai-trends/sources.json \
+  --since YYYY-MM-DD --until YYYY-MM-DD \
+  --out <工作目录>/candidates.jsonl \
+  --stats-out <工作目录>/collect-stats.json \
+  --cache generated/ai-trends/.cache
+```
 
-For each important item discovered, use different Subagents in parallel to trace links to original sources:
+规则：
 
-- If a news article cites a paper → retrieve arXiv abstract or paper page
-- If a blog cites benchmark results → find benchmark leaderboards
-- If a product announcement cites technical specs → check official release notes
-- If a claim seems surprising or extraordinary → find at least one independent corroborating source
-- **Concept Tracing**: Use Google, Bing, DuckDuckGo to search for the original proposer/article of the term, trace the earliest appearance time
+- 默认只启用 A 级来源；B 级来源按预算选取一组并逐周轮换；C 级来源只在出现明确缺口时手工抓取。
+- 脚本失败时，先看 `collect-stats.json`，对失败的 A 级来源用 WebFetch 补抓一次，失败即记录到 `failures.jsonl` 并跳过。
+- A 级来源若在时间窗内没有产出任何带日期条目，说明索引页未暴露日期，必须对该来源用 WebFetch 补抓一次再判定为空。
+- 脚本默认保留 A 级来源的无日期条目（标记 `date_confidence=unknown`），交由筛选代理判断，避免 JS 渲染的索引页漏掉重大公告；B 级无日期条目默认丢弃。
+- GitHub 榜单的 Stars 与增量必须来自 `scripts/collect.py` 或 GitHub API 实测，禁止凭记忆、截图或估算填写。
+- 需要额外保留 B 级无日期条目时显式加 `--include-undated`，并在报告中说明其日期不确定。
+- 采集后必须运行去重：
 
-**Tracing Priority**:
-1. Authoritative blogger's first post (Martin Fowler, Simon Willison, Andrej Karpathy, etc.)
-2. Academic paper first appearance (arXiv)
-3. GitHub history (Issue, PR, Commit)
-4. Social media first discussion
-5. HN/Reddit earliest discussion post
+```bash
+python3 .claude/skills/ai-trends/scripts/dedup.py \
+  --in <工作目录>/candidates.jsonl --out <工作目录>/deduped.jsonl \
+  --stats-out <工作目录>/dedup-stats.json
+```
 
-Do NOT rely on a single aggregation article as the sole source for any claim.
+### 缺口查询
 
-## Step 4. Concept Verification and Writing
+只有在脚本采集之后仍存在明确缺口时才使用 WebSearch：
 
-For each candidate term (up to 5 most promising), launch **1 Subagent per concept** (5 total) in parallel. Each Subagent reads `references/concept-verification.md` and performs all three verification tasks in a single pass:
+- 查询条目来自 `references/search-queries.md` 的「缺口查询集」；
+- 数量不超过 `max_discovery_queries`；
+- 每次查询必须写明要填补的缺口，重复查询同一站点视为浪费；
+- 优先用 `site:` 定向到已知域名，或直接抓取该域名的索引页。
 
-- **Origin Tracing**: Verify the earliest origin of the concept (not limited by time range)
-- **Independent Validation**: Search for independent confirmations from different sources
-- **Controversy Analysis**: Collect and analyze supporting and opposing viewpoints
+---
 
-Each Subagent outputs a compact concept entry following the format in `references/concept-verification.md` Section 5.
+## 3. 第二步：统一筛选
 
-Only after all Subagents complete their verification, proceed to Step 5.
+**只允许一个筛选代理**，且该代理不得使用 Agent 工具。
 
-## Step 5. Data Reliability Annotation
+筛选代理读取 `deduped.jsonl`，按四个维度打分：
 
-- Source Hierarchy: Official research lab announcements > Peer-reviewed papers > Authoritative tech media > Analyst comments > Aggregation blogs
-- **ALL content MUST have source links**, allowing users to trace back to original information
-  - Every entry in tables must contain source links (e.g., `[Paper Name](URL)` or `[Project Name](URL)`)
-  - Every news event must be annotated with source
-  - Every data point must be traceable
-- Never use aggregation blogs as the sole source for any factual claim
-- If unable to find corroborating source for a claim, prefix with `【未经核实】` (Unverified)
-- For any topic where credible sources disagree, prefix with `【有争议】` (Controversial), and clearly present multiple viewpoints
-- Skip purely marketing announcements without verifiable technical substance or external validation
-- Distinguish between announced, released, peer-reviewed, and independently verified
+| 维度 | 判断标准 |
+| ---- | -------- |
+| 影响力 | 是否影响行业格局、能力边界或监管方向 |
+| 新颖性 | 是否为本期新事件，而非旧闻重复 |
+| 证据可得性 | 是否存在可直接引用的原始来源 |
+| 相关性 | 是否属于本简报覆盖的技术与产业主线 |
 
-## Step 6. Dynamic Data Source Discovery
+产出 `selected.json`：
 
-During the research process, if a domain appears in citation chains repeatedly (e.g., more than 3 independent citations) and is not in the solidified list, add it to the "Newly Discovered Data Sources" section in the report.
+```json
+{
+  "events": [
+    {
+      "id": "候选 ID",
+      "title": "标题",
+      "published_at": "YYYY-MM-DD",
+      "kind": "model|research|product|company|policy|safety|community|ecosystem|hardware",
+      "why": "入选理由",
+      "verification_need": "routine|extraordinary",
+      "source_urls": ["已知线索链接"]
+    }
+  ],
+  "concept_candidates": [
+    {"term": "术语", "evidence_urls": ["链接"], "note": "为什么可能是新概念"}
+  ]
+}
+```
 
-This mechanism ensures the skill evolves with each execution. After report generation, user should manually review and optionally update `references/data-sources.md` with newly discovered authoritative sources.
+上限：`max_verified_events` 条事件、`max_concepts` 个概念。筛选代理必须同时给出被淘汰的重要候选及原因，避免下一阶段重新拾取。
 
-## Step 7. Generate Briefing and Output to File
+---
 
-Read `references/output-format.md` for the complete output format template, generate the briefing according to the template.
+## 4. 第三步：按证据需求验证
 
-### Output File Path
+验证强度由事实类型决定，**不是每个事实都需要多源交叉**。
 
-Write the complete briefing to the absolute path: `./generated/ai-trends/YYYY-MM-DD.md` (get date via `date +%Y-%m-%d`, use `mkdir -p` to ensure directory exists). If `output_path` parameter is provided, use that path instead.
+| 事实类型 | 验证要求 | 允许来源数 |
+| -------- | -------- | ----------: |
+| 官方功能、定价、发布日期 | 官方原文 | 1 |
+| 厂商基准与性能数字 | 官方原文，标注“官方自报” | 1 |
+| 论文方法与结果 | 原论文，标注预印本或同行评审 | 1 |
+| 融资、并购、监管、重大事故 | 原始文件＋1 个独立可靠来源 | 2 |
+| 异常、颠覆性或争议主张 | 至少 2 个独立来源，并写明争议 | 2 |
+| 新兴概念起源 | 原始提出者＋1 个独立采用证据 | 2 |
 
-Inform the user of the file path after generation.
+执行方式：
+
+- 启动 **1 个事实验证代理**，覆盖 `selected.json` 中的全部事件，逐条写入 `evidence.jsonl`；
+- 启动 **0 至 `max_concepts` 个概念验证代理**，每个概念一个代理，规则见 `references/concept-verification.md`；
+- 代理总数不得超过 `max_agents`，且不得嵌套；
+- 每个代理的超时为 `agent_timeout_seconds`，超时后用 `TaskStop` 终止，记录失败并继续其余条目；
+- 每完成一条证据立即落盘，避免因中断丢失结果。
+
+代理输出要求：只返回条目 ID、成功／失败与计数；**不得在回复中重复完整报告**，细节一律写入 `evidence.jsonl`。
+
+---
+
+## 5. 第四步：可靠性标注
+
+- 来源层级：官方实验室公告与原始文件 ＞ 同行评审论文 ＞ 权威科技媒体 ＞ 分析师评论 ＞ 聚合博客。
+- 每条表格条目都要带来源链接；每条数据都要能回溯到 `evidence.jsonl`。
+- 聚合博客不得作为唯一来源。
+- 无法找到佐证的结论加 `【未经核实】`；权威来源存在分歧时加 `【有争议】` 并同时给出不同观点。
+- 区分“已宣布”“已发布”“预印本”“独立复现”，厂商自报数据一律显式标注。
+- 只有营销口号、无可核验技术实质的公告直接丢弃，不进入报告。
+
+---
+
+## 6. 第五步：撰写与交付
+
+1. 读取 `references/output-format.md` 的模板，按证据库生成报告。
+2. 只写证据库中存在的条目；需要补充时回到第四步，不得凭空补写。
+3. 概念数量可以为 0；不为凑数降低证据标准。
+4. 链接检查（只检查报告中实际引用的链接）：
+
+```bash
+python3 .claude/skills/ai-trends/scripts/check_links.py \
+  --file <报告路径> --cache generated/ai-trends/.cache \
+  --out <工作目录>/link-check.json
+```
+
+1. 格式检查必须通过：
+
+```bash
+npx --yes markdownlint-cli <报告路径>
+```
+
+1. 报告末尾附上本次实际消耗：检索次数、抓取页面数、候选与入选数量、证据来源分布、失败项与覆盖缺口。
+
+### 输出路径
+
+默认写入仓库内已跟踪的 `./ai-trends/YYYY-MM-DD.md`（`date +%Y-%m-%d` 获取日期，必要时 `mkdir -p`）。该目录随版本库保存，避免交付物因 `generated/` 被清理而丢失；工作文件与缓存仍放在 `generated/ai-trends/` 下。`output_path` 指定时以其为准。完成后告知用户文件路径与覆盖缺口。
+
+---
+
+## 7. 失败与降级
+
+| 情况 | 处理 |
+| ---- | ---- |
+| 单个来源抓取失败 | 用 WebFetch 补抓一次，仍失败则记录到 `failures.jsonl` 并继续 |
+| 同一域名连续失败达到 `failure_circuit_breaker` | 跳过该域名剩余请求 |
+| 子代理超时 | 终止该代理，保留已完成证据，继续其余条目 |
+| 概念证据不足 | 放弃该概念，概念数可以少于上限 |
+| 达到预算 100% | 立即基于现有证据生成报告，并在覆盖缺口中说明未覆盖范围 |
+| 采集结果为空 | 报告“本期无可靠新增”，不得编造 |
+
+降级时的报告必须显式列出未覆盖的来源与原因，而不是静默省略。
+
+---
+
+## 8. 数据源维护（不在常规运行内）
+
+数据源分层、轮换与清理规则见 `references/data-sources.md`。新发现的权威来源应先记入报告的「新发现的数据源」一节，再由人工复核后并入 `sources.json` 与 `references/data-sources.md`。常规运行不做来源清理，避免把预算花在低价值维护上。
+
+---
+
+## 附录：常用命令
+
+```bash
+# 采集（默认启用 A、B 层；只跑 A 层用 --tiers A）
+python3 .claude/skills/ai-trends/scripts/collect.py --sources .claude/skills/ai-trends/sources.json \
+  --since 2026-11-09 --until 2026-11-24 --out <工作目录>/candidates.jsonl \
+  --stats-out <工作目录>/collect-stats.json --cache generated/ai-trends/.cache --tiers A,B
+
+# 去重
+python3 .claude/skills/ai-trends/scripts/dedup.py --in <工作目录>/candidates.jsonl --out <工作目录>/deduped.jsonl
+
+# 证据校验与统计
+python3 .claude/skills/ai-trends/scripts/evidence.py validate --file <工作目录>/evidence.jsonl
+python3 .claude/skills/ai-trends/scripts/evidence.py summary --file <工作目录>/evidence.jsonl
+
+# 链接检查与格式检查
+python3 .claude/skills/ai-trends/scripts/check_links.py --file <报告路径> --cache generated/ai-trends/.cache
+npx --yes markdownlint-cli <报告路径>
+```

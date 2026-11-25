@@ -12,4 +12,7 @@ node_modules
 .pnpm-store/
 tmp/
 
+__pycache__/
+*.py[cod]
+
 generated/

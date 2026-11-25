@@ -1,0 +1,235 @@
+{
+  "version": 1,
+  "notes": "tier A 每次采集，tier B 每次只启用预算内的一组并轮换，tier C 仅在缺口明确时手工抓取。max_items 为单源候选上限。",
+  "sources": [
+    {
+      "id": "anthropic-news",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://www.anthropic.com/news",
+      "max_items": 40
+    },
+    {
+      "id": "openai-news",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://openai.com/news/",
+      "max_items": 40
+    },
+    {
+      "id": "openai-safety-reports",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://openai.com/safety-alignment/misalignment-reports/",
+      "max_items": 30
+    },
+    {
+      "id": "deepmind-blog",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://deepmind.google/blog/",
+      "max_items": 40
+    },
+    {
+      "id": "google-blog-ai",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://blog.google/technology/ai/",
+      "max_items": 40
+    },
+    {
+      "id": "huggingface-blog",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://huggingface.co/blog",
+      "max_items": 40
+    },
+    {
+      "id": "nvidia-newsroom",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://nvidianews.nvidia.com/news",
+      "max_items": 30
+    },
+    {
+      "id": "nvidia-blog",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://blogs.nvidia.com/blog/category/deep-learning/",
+      "max_items": 30
+    },
+    {
+      "id": "thinkingmachines",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://thinkingmachines.ai/",
+      "max_items": 20
+    },
+    {
+      "id": "z-ai-blog",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://z.ai/blog/glm-5.4",
+      "max_items": 20
+    },
+    {
+      "id": "mistral-news",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://mistral.ai/news/",
+      "max_items": 20
+    },
+    {
+      "id": "meta-engineering-blog",
+      "tier": "A",
+      "kind": "index",
+      "url": "https://engineering.fb.com/",
+      "max_items": 20
+    },
+    {
+      "id": "arxiv-cs-ai",
+      "tier": "A",
+      "kind": "arxiv",
+      "url": "https://export.arxiv.org/api/query",
+      "max_items": 40
+    },
+    {
+      "id": "arxiv-cs-lg",
+      "tier": "A",
+      "kind": "arxiv",
+      "url": "https://export.arxiv.org/api/query",
+      "max_items": 25
+    },
+    {
+      "id": "arxiv-cs-cl",
+      "tier": "A",
+      "kind": "arxiv",
+      "url": "https://export.arxiv.org/api/query",
+      "max_items": 25
+    },
+    {
+      "id": "hn-frontpage",
+      "tier": "A",
+      "kind": "hn",
+      "url": "https://hn.algolia.com/api/v1/search",
+      "max_items": 60
+    },
+    {
+      "id": "github-trending-weekly",
+      "tier": "B",
+      "kind": "github-trending",
+      "url": "https://github.com/trending?since=weekly",
+      "max_items": 30
+    },
+    {
+      "id": "github-trending-monthly",
+      "tier": "B",
+      "kind": "github-trending",
+      "url": "https://github.com/trending?since=monthly",
+      "max_items": 30
+    },
+    {
+      "id": "techcrunch-ai",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://techcrunch.com/category/artificial-intelligence/",
+      "max_items": 40
+    },
+    {
+      "id": "venturebeat-ai",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://venturebeat.com/ai/",
+      "max_items": 40
+    },
+    {
+      "id": "the-decoder",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://the-decoder.com",
+      "max_items": 30
+    },
+    {
+      "id": "the-new-stack",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://thenewstack.io/",
+      "max_items": 30
+    },
+    {
+      "id": "deeplearning-batch",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.deeplearning.ai/the-batch/",
+      "max_items": 15
+    },
+    {
+      "id": "qbitai",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.qbitai.com/",
+      "max_items": 30
+    },
+    {
+      "id": "jiqizhixin",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.jiqizhixin.com/",
+      "max_items": 30
+    },
+    {
+      "id": "tmtpost",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.tmtpost.com/",
+      "max_items": 30
+    },
+    {
+      "id": "36kr",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.36kr.com/",
+      "max_items": 30
+    },
+    {
+      "id": "caixin-global",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.caixinglobal.com/",
+      "max_items": 30
+    },
+    {
+      "id": "v2ex-ai",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.v2ex.com/?tab=ai",
+      "max_items": 25
+    },
+    {
+      "id": "oschina",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.oschina.net/news",
+      "max_items": 25
+    },
+    {
+      "id": "berkeley-news",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://news.berkeley.edu/",
+      "max_items": 20
+    },
+    {
+      "id": "the-register",
+      "tier": "B",
+      "kind": "index",
+      "url": "https://www.theregister.com/ai/",
+      "max_items": 20
+    }
+  ],
+  "arxiv_categories": {
+    "arxiv-cs-ai": "cat:cs.AI",
+    "arxiv-cs-lg": "cat:cs.LG",
+    "arxiv-cs-cl": "cat:cs.CL"
+  }
+}

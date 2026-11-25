@@ -1,264 +1,120 @@
-# Authoritative Data Sources
+# 数据源分层与轮换规则
 
-This file defines the data sources each Subagent is responsible for retrieving. **This list was researched and verified in May 2026, updated July 2026** - sources marked as inactive should be periodically verified and updated.
+本文件用于**人工维护**来源清单。常规运行不执行来源清理，采集清单以 `.claude/skills/ai-trends/sources.json` 为准，本文件解释分层理由、覆盖范围与已知失效来源。
 
-## Official Research Labs (subagent-official-labs)
+## 分层定义
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| Anthropic News | https://www.anthropic.com/news | ★★★★★ | Active | Claude releases, enterprise partnerships, safety research |
-| OpenAI News | https://openai.com/news | ★★★★★ | Active | GPT releases, company announcements |
-| Google DeepMind Blog | https://deepmind.google/blog/ | ★★★★★ | Active | Gemini, AlphaFold, research breakthroughs |
-| Meta AI Blog | https://ai.meta.com/blog/ | ★★★★★ | Active | Llama, SAM, open research |
-| Mistral AI News | https://mistral.ai/news/ | ★★★★☆ | Active | Model releases, partnerships |
-| Hugging Face Blog | https://huggingface.co/blog | ★★★★★ | Active | Open-source models, tutorials, ecosystem |
-| Google Research Blog | https://research.google/blog/ | ★★★★★ | Active | Academic-level technical content |
-| Google Blog AI | https://blog.google/technology/ai/ | ★★★★★ | Active | Product announcements, Gemini features |
-| BAIR Blog | https://bair.berkeley.edu/blog/ | ★★★★☆ | Active | Academic AI research, emerging concepts |
-| Microsoft Blog | https://blogs.microsoft.com | ★★★★★ | Active | Azure AI, Copilot, enterprise AI |
-| NVIDIA Developer Blog | https://developer.nvidia.com/blog | ★★★★★ | Active | GPU optimization, LLM inference, Blackwell |
-| DeepSeek Official | https://www.deepseek.com | ★★★★★ | Active | R1, V3, Coder V2 open source models |
+| 层级 | 定义 | 运行策略 |
+| ---- | ---- | -------- |
+| A | 官方实验室公告、原始论文与预印本、监管与政府文件、代码仓库、权威榜单 API | 每次运行都采集 |
+| B | 权威科技媒体、重要社区、知名中文媒体 | 每次运行选取预算内的一组，逐周轮换 |
+| C | 个人博客、聚合站、二手解读、垂直小站 | 仅在出现明确缺口时手工抓取，或只作线索 |
 
-**Note**: Qwen LM Blog (https://qwenlm.github.io/blog/) was found INACTIVE (last post September 2025). DeepSeek and 智谱AI are more active Chinese AI sources.
+## 运行策略
 
-## Technical Analysis & Research (subagent-research)
+1. `scripts/collect.py` 默认启用 A 层；B 层按 `sources.json` 中 `tier` 字段与轮换表选择；C 层不进入自动采集。
+2. B 层每周轮换，规则见下方轮换表；同一事件若已在 A 层出现，不再从 B 层重复验证。
+3. C 层来源只能作为线索，不得作为唯一来源；报告中引用前必须回溯到 A 层或独立可靠来源。
+4. 单一域名连续失败达到 `failure_circuit_breaker` 次后跳过，避免无效重试。
+5. 新的权威来源先记入报告的「新发现的数据源」一节，人工复核后再并入 `sources.json`。
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| arXiv cs.AI | https://arxiv.org/list/cs.AI/recent | ★★★★★ | Active | AI agents, LLMs, planning, RL |
-| arXiv cs.LG | https://arxiv.org/list/cs.LG/recent | ★★★★★ | Active | Machine learning theory, algorithms |
-| arXiv cs.CL | https://arxiv.org/list/cs.CL/recent | ★★★★★ | Active | Computational linguistics, NLP |
-| arXiv cs.CV | https://arxiv.org/list/cs.CV/recent | ★★★★★ | Active | Computer vision |
-| Hugging Face Papers | https://huggingface.co/papers | ★★★★★ | Active | Community-curated trending papers |
-| The Decoder | https://the-decoder.com | ★★★★☆ | Active | AI news, research analysis |
-| SemiAnalysis | https://semianalysis.com | ★★★★☆ | Active | AI hardware, semiconductor analysis |
-| LMSYS Chatbot Arena | https://lmarena.ai | ★★★★★ | Active | LLM leaderboards, human preference benchmarks |
-| OpenCompass | https://opencompass.org.cn | ★★★★☆ | Active | Chinese LLM evaluation platform |
-| Papers With Code | https://paperswithcode.com/latest | ★★★★★ | Active | Research papers with implementation |
-| MarkTechPost | https://www.marktechpost.com | ★★★☆☆ | Active | AI research summaries, model release coverage |
-| OpenRouter | https://openrouter.ai | ★★★★☆ | Active | Multi-provider LLM routing, pricing comparison |
-| LLM Stats | https://llm-stats.com/ | ★★★☆☆ | Active | LLM pricing and performance tracking |
-| The New Stack | https://thenewstack.io/ | ★★★★☆ | Active | Developer ecosystem, cloud-native, AI engineering |
-| The Deep Feed | https://www.thedeepfeed.ai/ | ★★★☆☆ | Active | AI agent engineering analysis |
-| AI Papers Academy | https://aipapersacademy.com/ | ★★★☆☆ | Active | AI research paper explanations |
-| The Deep View | https://www.thedeepview.com/ | ★★★☆☆ | Active | AI deep tech analysis |
-| i-Scoop.eu | https://www.i-scoop.eu/ | ★★★☆☆ | Active | Digital transformation, AI industry analysis |
-| ApplyData | https://applydata.io/ | ★★★☆☆ | Active | AI application data and analytics |
-| Loop Engineering Run | https://loopengineering.run/ | ★★★☆☆ | Active | Loop engineering resources and analysis |
-| Skillenai | https://skillenai.com/ | ★★★☆☆ | Active | AI skills and agent capabilities |
-| ExplainX | https://explainx.ai/ | ★★★☆☆ | Active | AI explainability and analysis |
-| Black Matter VC | https://blackmatter.vc | ★★★☆☆ | Active | AI/ML venture capital analysis |
-| INNOQ | https://www.innoq.com | ★★★☆☆ | Active | Software architecture, AI engineering |
-| Jellyfish | https://jellyfish.co | ★★★☆☆ | Active | Engineering management, AI adoption metrics |
-| BestHub | https://www.besthub.dev/ | ★★★☆☆ | Active | Developer tool and AI project discovery |
-| Agno | https://www.agno.com | ★★★☆☆ | Active | AI agent platform and analysis |
-| EigenCloud Blog | https://blog.eigencloud.xyz | ★★☆☆☆ | Active | Cloud AI infrastructure |
-| MegaOneAI | https://megaoneai.com | ★★☆☆☆ | Active | AI technology analysis |
-| Oflight | https://www.oflight.co.jp/ | ★★☆☆☆ | Active | Japanese AI technology analysis |
-| Scala Teams | https://www.scalateams.com | ★★☆☆☆ | Active | AI engineering team insights |
-| PromptFluent | https://www.promptfluent.com | ★★☆☆☆ | Active | Prompt engineering resources |
-| Xano | https://www.xano.com | ★★☆☆☆ | Active | No-code backend, AI integration |
+---
 
-**New discovery**: LMSYS Chatbot Arena (lmarena.ai) is the industry-standard benchmark for evaluating LLMs with human preference rankings.
+## A 层：官方与原始来源
 
-## Developer Communities (subagent-community)
+### 实验室与产品公告
 
-### English Developer Communities
+| 来源 | 地址 | 覆盖内容 |
+| ---- | ---- | ---- |
+| Anthropic News | <https://www.anthropic.com/news> | Claude 发布、安全研究、企业合作 |
+| OpenAI News | <https://openai.com/news/> | GPT 发布、公司公告 |
+| OpenAI 失准事故索引 | <https://openai.com/safety-alignment/misalignment-reports/> | Agent 对齐事故公开记录 |
+| Google DeepMind Blog | <https://deepmind.google/blog/> | Gemini、世界模型、Alpha 系列研究 |
+| Google Blog AI | <https://blog.google/technology/ai/> | 产品公告与模型发布 |
+| Hugging Face Blog | <https://huggingface.co/blog> | 开放模型与工程实践 |
+| NVIDIA Newsroom | <https://nvidianews.nvidia.com/news> | 公司公告与治理事件 |
+| NVIDIA Developer Blog | <https://blogs.nvidia.com/blog/category/deep-learning/> | 硬件与推理优化 |
+| Thinking Machines Lab | <https://thinkingmachines.ai/> | 模型架构与训练方法一手说明 |
+| Z.ai Blog | <https://z.ai/blog/glm-5.4> | GLM 系列模型发布 |
+| Mistral AI News | <https://mistral.ai/news/> | 模型与商业合作 |
+| Meta 工程博客 | <https://engineering.fb.com/> | 开源研究与系统实践；`ai.meta.com/blog` 拒绝自动化访问，需手工抓取 |
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| Hacker News | https://news.ycombinator.com | ★★★★★ | Active | Real-time tech discussions, AI trends |
-| r/LocalLLaMA | https://www.reddit.com/r/LocalLLaMA/ | ★★★★☆ | Active | Local LLM deployment, quantization |
-| r/AI_Agents | https://www.reddit.com/r/AI_Agents/ | ★★★★☆ | Active | AI agent frameworks, orchestration |
-| r/MachineLearning | https://www.reddit.com/r/MachineLearning/ | ★★★★☆ | Active | ML research discussions |
-| r/PromptEngineering | https://www.reddit.com/r/PromptEngineering/ | ★★★☆☆ | Active | Prompt techniques |
-| r/vibecoding | https://www.reddit.com/r/vibecoding/ | ★★★☆☆ | Active | AI coding discussions |
+### 论文与榜单
 
-**Note**: Reddit may block WebFetch; use WebSearch as fallback for Reddit communities.
+| 来源 | 地址 | 说明 |
+| ---- | ---- | ---- |
+| arXiv API | <https://export.arxiv.org/api/query> | 按分类与提交时间检索 cs.AI、cs.LG、cs.CL |
+| Hugging Face Papers | <https://huggingface.co/papers> | 社区精选论文 |
+| LMSYS Chatbot Arena | <https://lmarena.ai> | 人类偏好榜单 |
+| OpenCompass | <https://opencompass.org.cn> | 中文模型评测 |
+| Papers With Code | <https://paperswithcode.com/latest> | 论文与实现 |
 
-### Chinese Developer Communities
+### 社区与代码
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| V2EX AI Tab | https://www.v2ex.com/?tab=ai | ★★★★☆ | Active | Chinese developer discussions, AI IDEs |
-| OSChina | https://www.oschina.net | ★★★★☆ | Active | Chinese open-source community, AI projects |
-| 掘金 | https://juejin.cn | ★★★☆☆ | Active | Developer tutorials, AI coding |
-| VibeVibe | https://vibevibe.cn | ★★☆☆☆ | Active | Chinese AI coding community |
-| AGENTS.md 规范站 | https://agents.md/ | ★★★☆☆ | Active | AGENTS.md specification and community |
-| AgentScout | https://agentscout.live/ | ★★★☆☆ | Active | AI agent discovery and comparison |
+| 来源 | 地址 | 说明 |
+| ---- | ---- | ---- |
+| Hacker News（Algolia API） | <https://hn.algolia.com/api/v1/search> | 按时间与分数检索讨论，含标题、分数、评论数与讨论 ID |
+| GitHub Trending | <https://github.com/trending?since=weekly> | 周榜与月榜，配套仓库 API 核实 Stars |
+| GitHub REST API | <https://api.github.com/repos/{owner}/{repo}> | 仓库元数据与最近提交 |
 
-**Note**: CSDN AI section (ai.csdn.net) shows "暂无数据" and is INACTIVE - removed from list.
+### 政策与治理
 
-## Chinese AI Media & Ecosystem (subagent-china)
+| 来源 | 地址 | 说明 |
+| ---- | ---- | ---- |
+| California Government Operations Agency | <https://www.govops.ca.gov/> | 加州 AI 治理报告原文 |
+| 北京市政府门户 | <https://english.beijing.gov.cn/> | 产业行动计划原文 |
+| 工信部政策文件 | <https://www.miit.gov.cn/> | 产业与网络接入规范 |
+| 美国 SEC EDGAR | <https://www.sec.gov/cgi-bin/browse-edgar> | 上市与并购原始文件 |
+| IETF Datatracker | <https://datatracker.ietf.org/> | 协议与标准草案 |
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| 量子位 (QbitAI) | https://www.qbitai.com/ | ★★★★★ | Active (today) | Leading AI media, daily updates |
-| 机器之心 (Ji Qi Zhi Xin) | https://www.jiqizhixin.com/ | ★★★★★ | Active | Research-focused, PRO membership |
-| 钛媒体 (TMTPost) | https://www.tmtpost.com/ | ★★★★★ | Highly Active | Daily AI briefings, AGI coverage |
-| 36氪 | https://www.36kr.com/ | ★★★★★ | Active | AI startups, VC, investment news |
-| 智东西 (ZhiDongXi) | https://www.zhidx.com/ | ★★★★☆ | Active | AI chips, robotics, smart vehicles |
-| 同步科技 (SyncedReview) | https://syncedreview.com/ | ★★☆☆☆ | Inactive (Aug 2025) | AI research translation - last post August 2025, not updated |
-| 智谱AI (Zhipu AI) | https://www.zhipuai.cn/ | ★★★★★ | Active | GLM models, MaaS platform |
-| DeepSeek | https://www.deepseek.com/ | ★★★★★ | Active | Open source models, research papers |
-| xix.ai | https://xix.ai | ★★★☆☆ | Active | Chinese AI news aggregator, open-source model ecosystem coverage |
-| 财新网 (Caixin) | https://www.caixin.com/ | ★★★★☆ | Active | Chinese financial news, AI policy coverage |
-| 证券时报 (STCN) | https://www.stcn.com/ | ★★★☆☆ | Active | Chinese securities news, tech IPO coverage |
-| Pandaily | https://pandaily.com/ | ★★★☆☆ | Active | English-language Chinese tech news |
-| KeyLinking | https://www.keylinking.com/ | ★★★☆☆ | Active | Chinese AI industry analysis |
-| GitCode | https://gitcode.com/ | ★★★☆☆ | Active | Chinese open-source code platform, AI projects |
-| Caixin Global | https://www.caixinglobal.com/ | ★★★★☆ | Active | English-language Chinese financial/tech news |
+---
 
-## News, Commentary, Policy & Briefings (subagent-news)
+## B 层：媒体、社区与中文生态
 
-### News & Commentary
+每次运行按预算选取，轮换表如下：
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| TechCrunch AI | https://techcrunch.com/category/artificial-intelligence/ | ★★★★★ | Active | Breaking AI news, IPO, funding |
-| The Verge AI | https://www.theverge.com/ai-artificial-intelligence | ★★★★☆ | Active | News, reviews, analysis |
-| VentureBeat AI | https://venturebeat.com/ai/ | ★★★★☆ | Active | Enterprise AI, product launches |
-| MIT Technology Review AI | https://www.technologyreview.com/artificial-intelligence/ | ★★★★★ | Active | In-depth investigative reporting |
-| AI Magazine | https://aimagazine.com/ | ★★★★☆ | Active | AI features, industry analysis |
-| The Batch (DeepLearning.AI) | https://www.deeplearning.ai/the-batch/ | ★★★★★ | Active (weekly) | Andrew Ng's curated summary |
-| Import AI | https://importai.substack.com | ★★★★☆ | Active (weekly) | Jack Clark's AI analysis (127K+ subscribers) |
-| Latent Space | https://www.latent.space/ | ★★★★☆ | Active | AI Engineer newsletter + podcast (182K+ subscribers) |
-| Unite.AI | https://www.unite.ai/ | ★★★★☆ | Active | AI news, tool reviews |
-| Artificial Intelligence News | https://www.artificialintelligence-news.com/ | ★★★★☆ | Active | Enterprise AI adoption |
-| Predicate Ventures | https://www.predicate.ventures | ★★★☆☆ | Active | AI engineering analysis, Harness Engineering quantification |
-| The Register | https://www.theregister.com/ | ★★★★☆ | Active | Enterprise tech news, AI coverage |
-| Not Boring (Packy McCormick) | https://www.notboring.co/ | ★★★★☆ | Active | Deep tech and AI strategy analysis |
-| Tracxn | https://tracxn.com/ | ★★★☆☆ | Active | Startup intelligence, AI funding tracking |
-| MiaoK.ong AI Daily | https://www.miaok.ong/en/ai-daily/ | ★★★☆☆ | Active | Daily AI news digest |
-| AI Weekly | https://www.aiweekly.co/ | ★★★☆☆ | Active | Weekly AI newsletter and analysis |
-| The Agent Times | https://theagenttimes.com/ | ★★★☆☆ | Active | AI agent industry news and analysis |
-| The Stack Observer | https://thestackobserver.com/ | ★★★☆☆ | Active | Tech stack and AI infrastructure news |
-| Agent Brief | https://news.agentcommunity.org | ★★★☆☆ | Active | AI agent community newsletter |
-| OfficeChai | https://officechai.com | ★★☆☆☆ | Active | Indian tech and AI startup news |
-| SkillsLLM | https://skillsllm.com/ | ★★☆☆☆ | Active | AI skills and capabilities tracking |
+| 轮换周 | 英文媒体与研究 | 中文媒体 | 社区 |
+| -------- | -------------- | -------- | ---- |
+| 第 1 周 | TechCrunch AI、VentureBeat AI | 量子位、钛媒体 | Hacker News、V2EX |
+| 第 2 周 | The Decoder、The New Stack | 机器之心、36氪 | Hacker News、OSChina |
+| 第 3 周 | The Register、MIT Technology Review | 财新、证券时报 | Hacker News、V2EX |
+| 第 4 周 | The Batch、Import AI | 智东西、xix.ai | Hacker News、OSChina |
 
-### Policy & Safety
+固定补充源：[Berkeley News](https://news.berkeley.edu/)、[IEEE Spectrum](https://spectrum.ieee.org/)、[VentureBeat AI](https://venturebeat.com/ai/) 与 [TechCrunch AI](https://techcrunch.com/category/artificial-intelligence/) 始终保留在 B 层候选中。
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| AI Snake Oil (Normaltech) | https://www.normaltech.ai/ | ★★★★☆ | Active | Critical AI analysis (76K+ subscribers) |
-| Alignment Forum | https://www.alignmentforum.org/ | ★★★★☆ | Active | AI safety research community |
+---
 
-### Newsletters / Aggregators
+## C 层：按需来源
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| TLDR AI | https://tldr.tech/ai | ★★☆☆☆ | Active (daily) | Curated digest (920K readers) |
-| AlphaSignal | https://alphasignal.ai | ★★★☆☆ | Active | AI signal newsletter |
-| AI Signal | https://ai-signal.ericblue.com | ★★★☆☆ | Active | AI research signals, interpretability, reasoning trends |
+以下来源仅在明确缺口时手工抓取，不得作为唯一来源：
 
-**New discovery**: Latent Space (182K+ subscribers) features insights from Greg Brockman, Andrej Karpathy, George Hotz, Simon Willison, Soumith Chintala - excellent for technical AI engineering trends.
+- 个人博客：[Simon Willison](https://simonwillison.net)、[Martin Fowler](https://martinfowler.com)、[Chip Huyen](https://huyenchip.com)、[Philipp Schmid](https://www.philschmid.de)、[Mitchell Hashimoto](https://mitchellh.com/writing)、[Addy Osmani](https://addyosmani.com/)
+- 聚合与解读：i-Scoop、The Deep Feed、AI Papers Academy、ApplyData、ExplainX、Loop Engineering、Skillenai、BestHub、Agno、PromptFluent
+- 投资与市场：Tracxn、Black Matter VC、Predictive Ventures、Not Boring
+- 中文：VibeVibe、AgentScout、KeyLinking、GitCode
 
-## Authoritative Personal Blogs & Developer Blogs (subagent-blogs)
+---
 
-### Active Authoritative Personal Blogs
+## 已知失效或降级来源
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| Simon Willison | https://simonwillison.net | ★★★★★ | Active (May 17, 2026) | Hands-on LLM analysis, AI tools |
-| Martin Fowler | https://martinfowler.com | ★★★★★ | Active (May 2026) | Software architecture in AI era |
-| Chip Huyen | https://huyenchip.com | ★★★★★ | Active | ML systems design, AI engineering |
-| Cloudflare Blog | https://blog.cloudflare.com | ★★★★☆ | Active (May 14, 2026) | AI infrastructure, Workers AI |
-| Mitchell Hashimoto | https://mitchellh.com/writing | ★★★★★ | Active | Harness Engineering originator, AI adoption journey |
-| Addy Osmani | https://addyosmani.com/ | ★★★★☆ | Active | Software engineering, AI harness engineering |
-| Cryptography Engineering (Matthew Green) | https://blog.cryptographyengineering.com | ★★★★☆ | Active | Security, cryptography, AI safety |
-| Shiv's Blog | https://shvbsle.in/ | ★★★☆☆ | Active | AI engineering insights |
-| Cobus Greyling (Medium) | https://cobusgreyling.medium.com/ | ★★★☆☆ | Active | LLM application architecture, agents |
-| BD Tech Talks (Ben Dickson) | https://bdtechtalks.substack.com/ | ★★★☆☆ | Active | AI research analysis, tech commentary |
-| Johnson Lee Blog | https://johnsonlee.io/ | ★★★☆☆ | Active | AI engineering, agent development |
-| Tian Pan Blog | https://tianpan.co/ | ★★★☆☆ | Active | AI research and engineering |
-| AppliedIngenuity (Substack) | https://appliedingenuity.substack.com | ★★★☆☆ | Active | Applied AI engineering |
-| Hagen Paul Pfeifer (jauu.net) | https://jauu.net | ★★★☆☆ | Active | AI engineering, Agentocene concept |
-| Alex Moening | https://alexmoening.com | ★★★☆☆ | Active | AI engineering insights |
-| BEP Research (Substack) | https://bepresearch.substack.com | ★★★☆☆ | Active | AI research analysis |
-| Sibylline Software | https://sibylline.dev | ★★★☆☆ | Active | AI agent development insights |
+| 来源 | 状态 | 处理 |
+| ---- | ---- | ---- |
+| Qwen LM Blog | 长期停更 | 改用 Qwen 官方文档与模型卡 |
+| 同步科技 SyncedReview | 2025 年 8 月后停更 | 移除 |
+| CSDN AI 频道 | 无有效内容 | 移除 |
+| AgentScout | 内容停留在 2026 年 7 月 | 降级至 C 层 |
+| karpathy.ai | 站点为空 | 移除 |
+| lilianweng.github.io | 2025 年 5 月后停更 | 移除 |
+| blog.keras.io | 2018 年后停更 | 移除 |
+| ai.meta.com/blog | 拒绝自动化访问，返回 400 | 改用 Meta 工程博客，必要时手工抓取 |
+| arXiv 列表与 API | 常见超时，需更长的请求超时 | 采集脚本对 arXiv 使用三倍超时；仍失败时用 WebFetch 抓取摘要页 |
+| Berkeley News、The New Stack | 对脚本返回 403 | 保留在清单内，由 WebFetch 补抓；失败则记入覆盖缺口 |
 
-### Corporate/Platform Blogs (High Quality)
+---
 
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| NVIDIA Developer Blog | https://developer.nvidia.com/blog | ★★★★★ | Active | GPU optimization, LLM inference |
-| Hugging Face Blog | https://huggingface.co/blog | ★★★★★ | Active | Technical tutorials, model releases |
-| Anthropic News | https://www.anthropic.com/news | ★★★★★ | Active | Claude updates, safety research |
-| GitHub Blog | https://github.blog | ★★★★★ | Active | AI coding tools, open source trends |
-| LangChain Blog | https://www.langchain.com/blog/ | ★★★★☆ | Active | Agent frameworks, LLM tooling |
-| Continue.dev Blog | https://blog.continue.dev/ | ★★★★☆ | Active | AI coding assistants |
-| MongoDB Blog | https://www.mongodb.com/company/blog | ★★★★☆ | Active | Agent harness architecture, enterprise AI infrastructure |
-| Databricks Blog | https://www.databricks.com/blog | ★★★★☆ | Active | Data + AI platform, LLM training, Mosaic AI |
-| Braintrust Blog | https://braintrust.dev/blog | ★★★☆☆ | Active | AI evaluation and observability |
+## 维护规则
 
-**Inactive blogs found during research** (NOT recommended):
-
-- karpathy.ai - INACTIVE (redirect/placeholder). Karpathy is active on YouTube and Twitter/X instead
-- lilianweng.github.io - Last post May 2025, INACTIVE
-- blog.keras.io - Last post 2018, completely stale
-
-### Developer Blogs & Technical Analysis
-
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| Phil Schmid | https://www.philschmid.de/ | ★★★★☆ | Active | LLM application architecture |
-| DB Reunig | https://www.dbreunig.com/ | ★★★★☆ | Active | AI engineering insights |
-| Latent Space | https://www.latent.space/ | ★★★★☆ | Active | AI engineering podcast + newsletter |
-| Arize AI Blog | https://arize.com/blog | ★★★★☆ | Active | Agent observability, harness engineering, LLM evaluation |
-
-## AI Safety & Security (subagent-safety)
-
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| Grith AI | https://grith.ai/ | ★★★☆☆ | Active | AI security and safety research |
-| Sentry Security Blog | https://blog.sentry.security | ★★★☆☆ | Active | AI security vulnerabilities and research |
-| METR | https://metr.org | ★★★★☆ | Active | AI model evaluation and threat research |
-
-## Hardware & Infrastructure (subagent-hardware)
-
-| Source | URL | Authority | Status | Notes |
-| :----- | :-- | :-------- | :----- | :---- |
-| ServeTheHome | https://www.servethehome.com | ★★★★☆ | Active | Server hardware, AI infrastructure analysis |
-| SemiIPHub | https://semiiphub.com/ | ★★★☆☆ | Active | Semiconductor IP and AI hardware analysis |
-
-## GitHub Trending (subagent-github-trending)
-
-Visit the following GitHub Trending pages:
-
-- **Weekly**: https://github.com/trending?since=weekly
-- **Monthly**: https://github.com/trending?since=monthly
-
-**Key trend (May 2026)**: AI Agent development tools dominate GitHub trending:
-
-- openhuman (15.2k stars) - Personal AI super intelligence
-- codegraph (3.8k stars) - Code knowledge graph for AI coding
-- scientific-agent-skills (24.1k stars) - Ready-to-use AI agent skills
-- agents-towards-production (20.1k stars) - Production-grade agent tutorials
-
-Use these to identify:
-
-- **Sustained Hot Projects** (🔁): Appears in both weekly + monthly - validated by community
-- **Emerging Burst Projects** (🔥): Only in weekly - new focal point, monitor closely
-
-## Dynamic Data Source Discovery
-
-During research execution, track domains appearing repeatedly in citation chains. If a domain:
-
-- Appears in **more than 3 independent citations**
-- Is **NOT in the solidified list above**
-- Is considered **authoritative and active**
-
-Add it to the **"新发现的数据源" (Newly Discovered Data Sources)** section in the report. This mechanism ensures the skill evolves with each execution.
-
-After report generation, manually review and optionally update this file with newly discovered sources.
-
-## Data Source Validation Checklist
-
-When adding new sources, verify:
-
-- [ ] URL is accessible (not 403/404)
-- [ ] Content updated in 2026
-- [ ] Source is authoritative (recognized expert/organization)
-- [ ] Content is relevant to AI development trends
-- [ ] Signal-to-noise ratio is acceptable (not just marketing)
+1. 每季度复核一次 A 层与 B 层来源的可达性与更新频率，维护动作不在常规简报运行内。
+2. 新来源并入前必须满足：可访问、当年有更新、主题相关、信噪比可接受。
+3. 同一机构的多个栏目合并为一条，避免重复采集。
+4. 出现某域名在引用链中重复出现 3 次以上时，先记入报告的「新发现的数据源」，人工确认后再并入。
